@@ -11,3 +11,13 @@
 *.lai
 *.la
 *.a
+
+# latex
+*.aux
+*.out
+*.gz
+*.log
+
+# emacs bullshit
+\#*\#
+.\#*

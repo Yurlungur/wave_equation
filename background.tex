@@ -1,0 +1,185 @@
+\documentclass[]{article}
+% Time-stamp: <2013-11-20 15:21:13 (jonah)>
+
+% packages
+\usepackage{fullpage}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{latexsym}
+\usepackage{graphicx}
+\usepackage{mathrsfs}
+\usepackage{verbatim}
+\usepackage{braket}
+\usepackage{listings}
+\usepackage{hyperref}
+
+% Preamble
+\hypersetup{pdftitle={background}}
+\author{Jonah Miller\\
+  \href{mailto:jonah.maxwell.miller@gmail.com}{jonah.maxwell.miller@gmail.com}}
+\title{Wave Equation Background}
+
+% Macros
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\eval}{\biggr\rvert} %evaluated at
+
+\begin{document}
+\maketitle
+
+\section{Introduction}
+
+The one dimensional scalar wave equation takes the form
+\begin{equation}
+  \label{eq:1d:wave}
+  \frac{\partial^2 u}{\partial t^2} = c^2 \frac{\partial^2 u}{\partial x^2},
+\end{equation}
+where $u$ is a scalar field defined on $x\in\Omega$ (where $\Omega$ is
+some one-dimensional domain) and evolving in time for all $t\in\tau$
+(where $\tau$ is an interval in $\R$). $c\in\R$ is a constant. In the
+initial-boundary formulation (the problem I solve here), we specify
+$u(0,x)$ and $u(t,\partial\Omega)$, where $\partial\Omega$ is the
+boundary of the domain.
+
+This is the problem I will solve. For simplicity, we will assume that
+\begin{eqnarray}
+  \label{eq:domains}
+  \Omega &=& [0,L],\text{ where }L>0\in\R\\
+  \text{and }\tau &=& [0,T],\text{ where }T>0\in\R.
+\end{eqnarray}
+
+Then the initial and boundary conditions are
+\begin{eqnarray}
+  \label{eq:initial:boundary:data}
+  u(0,x) &=& f(x)\text{ where }f(x) \in L_2(\Omega),\\
+  u(t,0) &=& \alpha,\text{ where }\alpha\in\R\\
+  \text{and }u(t,L)&=&\beta\text{ where }\alpha\in\R.
+\end{eqnarray}
+
+\section{Coordinates}
+
+We will be feeding the wave equation in to a fourth-order Runge-Kutta
+integrator. Therefore, we would like to write the wave equation as a
+coupled system of first-order equations, not second order. Therefore, we let
+\begin{equation}
+  \label{eq:r:s:def}
+  s = \frac{\partial u}{\partial t}\text{ and }r = \frac{\partial u}{\partial x}.
+\end{equation}
+This transforms the wave equation into a first-order equation:
+\begin{equation}
+  \label{eq:wave:transformed:1}
+  \frac{\partial s}{\partial t} = c^2 \frac{\partial r}{\partial x}.
+\end{equation}
+Additionally, if we take a derivative of $r$ with respect to $t$, we
+get a second relationship:
+\begin{eqnarray}
+  \label{eq:wave:transformed:2}
+  \frac{\partial r}{\partial t} &=& \frac{\partial}{\partial t}\frac{\partial }{\partial x}u = \frac{\partial }{\partial x}\frac{\partial }{\partial t}u\nonumber\\
+  \Rightarrow \frac{\partial r}{\partial t} &=& \frac{\partial s}{\partial x}.
+\end{eqnarray}
+These two equations define the system we will integrate using
+Runge-Kutta and finite difference methods. This changes the boundary
+conditions somewhat. Now,
+\begin{eqnarray}
+  \label{eq:boundary:conditions:r:s}
+  r(0,x) &=& f'(x)\\
+  s(t,0) &=& s(t,L) = 0.
+\end{eqnarray}
+And now $\alpha$ and $\beta$ are constants of integration when we
+retrieve $u$ by integrating $s$.
+
+\section{Finite Differences}
+
+We place the functions $u$ and $r$ on a discrete, one-dimensional grid
+with fixed spacing. Let the grid points be indexed by $i$ ranging from
+0 to $n$. And let the grid spacing be $h$.
+
+This means the notion of a continuous derivative
+doesn't exist. To fix this, we use a method known as finite
+differences. We approximate derivatives at points on the interior by a
+``centered difference'' formula and derivatives at points on the
+boundary by a ``one-sided difference'' formula. Let $v$ be a scalar
+field on the grid. Let each element be $v_i$, where $i$ is the index
+of the grid points. Then,
+\begin{equation}
+  \label{eq:derivative:operator}
+  D v_i = \begin{cases}
+    \frac{v_{i+1} - v{i-1}}{2h}&\text{if }0 < i < n\\
+    \frac{v_i-v_{i-1}}{h}&\text{if }i = n\\
+    \frac{v_{i+1}-v_i}{h}&\text{if }i = 0
+  \end{cases}.
+\end{equation}
+These formulae can easily be derived by using taylor series. See, for
+example \cite{wikifinitedifferences} or \cite{Heath}.
+
+There is a problem, however. In the continuous case, we proved the existence of solutions using a ``maximum principle'' \cite{wikimaxprinciple,BC}. And the proof of this maximum principle requires ``integration by parts'' to hold \cite{BC}:
+\begin{equation}
+  \label{eq:integration:by:parts}
+  \braket{a,Db} + \braket{Da,b} = (ab)\eval_0^L,
+\end{equation}
+for all functions $a$ and $b$ in $L_2(\Omega)$, where $\braket{a,b}$
+is the standard inner product on the space:
+\begin{equation}
+  \label{eq:inner:product}
+  \braket{a,b} = \int_0^L ab dx.
+\end{equation}
+To show stability (which we won't), we must cook up a discrete inner
+product so that a discrete version of integration by parts, called ``summation by parts,'' holds.
+
+The key turns out to be to weigh the boundary points by half in the
+inner product. The resulting inner product looks something like this:
+\begin{equation}
+  \label{eq:discrete:inner:product}
+  \braket{a,b} = \frac{h}{2} (a_0 b_0 + a_n b_n) + h\sum_{i=1}^{n-1}a_i b_i,
+\end{equation}
+where $a_i$ and $b_i$ are the components of the vectors $a$ and $b$,
+which exist on the discrete grid. Let's show that summation by parts does indeed hold with this inner product:
+
+\begin{eqnarray}
+  \label{eq:summation:by:parts:proof:1}
+  \braket{a,Db} + \braket{Da,b} &=& \frac{1}{2}(a_0 Db_0 + a_n Db_n + b_0 Da_0 + b_n D a_n) + \sum_{i=1}^{n-1}(a_i Db_i + b_i Da_i)\nonumber\\
+  &=& \frac{1}{2}\left[a_0(b_1-b_0) + b_0(a_1-a_0) + a_n(b_n-b_{n-1})+b_n(a_n-a_{n-1})\right]\nonumber\\
+  &&\qquad + \frac{1}{2}\sum_{i=1}^n \left[b_i (a_{i+1}-a_{i-1}) + a_i(b_{i+1}-b_{i-1})\right]\nonumber\\
+  &=& \frac{1}{2}(2 a_n b_n - 2 a_0 b_0) + \frac{1}{2}(a_0 b_1 + a_1b_0 - a_n b_{n-1} - b_n a_{n-1})\nonumber\\
+  &&\qquad + \frac{1}{2} \sum_{i=1}^{n-1}\left(b_i a_{i+1} - b_i a_{i-1} + a_i b_{i+1} - a_i b_{i-1}\right)
+\end{eqnarray}
+Notice that in equation \eqref{eq:summation:by:parts:proof:1}, the
+$\frac{1}{2}(2 a_n b_n - 2 a_0 b_0)$ term is equal to $(ab)\eval_0^L.$
+Furthermore, if we expand the sum from $i=1$ to $i=n-1$, it will
+collapse, leaving only the initial and final terms. And these terms
+cancel perfectly with the $\frac{1}{2}(a_0 b_1 + a_1b_0 - a_n b_{n-1}
+- b_n a_{n-1})$ terms. So, in the end, we're left with
+\begin{equation}
+  \label{eq:summation:by:parts:proof:2}
+  \braket{a,Db}+\braket{Da,b} = (ab)\eval_0^L.
+\end{equation}
+This means that our inner product is stable. For more information, see \cite{Diener,Olsson1,Olsson1Sup,Olsson2}.
+
+\section{Numerical Methods}
+
+When we put $r$ and $s$ on a grid, we generate two $n$-dimensional
+vectors that are related by the equations discussed above. To solve
+for the time evolution of these vectors, we can feed them into a
+Runge-Kutte integrator. For more information on Runge Kutte methods,
+see, for example, \cite{Heath}.
+
+\begin{thebibliography}{8}
+
+\bibitem{wikifinitedifferences} Wikipedia contributors. Finite difference. Wikipedia, The Free Encyclopedia. November 13, 2013, 20:42 UTC. Available at: \url{http://en.wikipedia.org/w/index.php?title=Finite_difference&oldid=581529514.} Accessed November 20, 2013. 
+
+\bibitem{Heath} Heath, Michael T. \textit{Scientific Computing: An Introductory Survey.} United States: McGraw-Hill; 1997.
+
+\bibitem{wikimaxprinciple} Wikipedia contributors. Maximum principle. Wikipedia, The Free Encyclopedia. March 23, 2013, 09:10 UTC. Available at: \url{http://en.wikipedia.org/w/index.php?title=Maximum_principle&oldid=546502732.} Accessed November 20, 2013. 
+
+\bibitem{BC} Bleeker, David D. and Csordas, George. \textit{Basic Partial Differential Equations.} Boston, MA: International Press of Boston; 1996.
+
+\bibitem{Diener} Diener, P, Dorband, E, Schnetter, and E, Tiglio, M. ``New, efficient, and accurate high order derivatives and dissipation operators satisfying summation by parts, and applications in three-dimensional multi-block evolutions.'' \href{arXiv:gr-qc/0512001}{http://arxiv.org/abs/gr-qc/0512001}. (2005). Online resource.
+
+\bibitem{Olsson1} Olsson, Pelle. ``Summation by Parts, Projections, and Stability. I.'' \textit{Mathematics of Computation}. 64.11 (1995): 1035--1065. Online resource.
+
+\bibitem{Olsson1Sup} Olsson, Pelle. ``Supplement to Summation by Parts, Projections, and Stability. I.'' \textit{Mathematics of Computation}. 64.211 (1995): S23--S26. Online resource.
+
+\bibitem{Olsson2} Olsson, Pelle. ``Summation by Parts, Projections, and Stability II.'' \textit{Mathematics of Computation.} 64.212 (1995): 1473--1493. Online resource.
+
+\end{thebibliography}
+
+\end{document}
