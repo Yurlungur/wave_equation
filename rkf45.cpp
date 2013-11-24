@@ -1,7 +1,7 @@
 // rkf45.cpp
 
 // Author: Jonah Miller (jonah.maxwell.miller@gmail.com)
-// Time-stamp: <2013-10-21 20:56:56 (jonah)>
+// Time-stamp: <2013-11-23 22:26:54 (jonah)>
 
 // This is my implementation of the 4-5 Runge-Kutta-Fehlberg adaptive
 // step size integrator. For simplicity, and so that I can bundle
@@ -680,6 +680,17 @@ dVector RKF45::test_constraint_degree(dVector (*constraints)(double,const dVecto
   return constraints(ts.back(),ys.back());
 }
 
+// Evaluates a function double function on the y vector and on the
+// time and returns the output of the function. Useful for energy
+// methods. Uses the most recent time by default. But any time is
+// possible. Feed the number of time steps n in last
+double RKF45::eval_function(double (*to_eval)(double,const dVector)) const {
+  return to_eval(ts.back(),ys.back());
+}
+double RKF45::eval_function(double (*to_eval)(double,const dVector),
+		       int n) const {
+  return to_eval(ts[n],ys[n]);
+}
 
 // Tests by how much the y vector at time t fails to satisfy the
 // constraint function passed in. The constraint function should

@@ -1,5 +1,5 @@
 \documentclass[]{article}
-% Time-stamp: <2013-11-20 15:21:13 (jonah)>
+% Time-stamp: <2013-11-23 21:48:29 (jonah)>
 
 % packages
 \usepackage{fullpage}
@@ -103,7 +103,7 @@ of the grid points. Then,
 \begin{equation}
   \label{eq:derivative:operator}
   D v_i = \begin{cases}
-    \frac{v_{i+1} - v{i-1}}{2h}&\text{if }0 < i < n\\
+    \frac{v_{i+1} - v_{i-1}}{2h}&\text{if }0 < i < n\\
     \frac{v_i-v_{i-1}}{h}&\text{if }i = n\\
     \frac{v_{i+1}-v_i}{h}&\text{if }i = 0
   \end{cases}.

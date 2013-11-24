@@ -1,7 +1,7 @@
 // rkf45.hpp
 
 // Author: Jonah Miller (jonah.maxwell.miller@gmail.com)
-// Time-stamp: <2013-11-20 16:24:24 (jonah)>
+// Time-stamp: <2013-11-23 22:23:24 (jonah)>
 
 // This is the prototype for my implementation of the 4-5
 // Runge-Kutta-Feldberg adaptive step size integrator. For simplicity,
@@ -517,6 +517,13 @@ public: // Public interface
   // vector failed to satisfy the appropriate constraint
   // equation. Passed by reference. Uses the most recent time.
   dVector test_constraint_degree(dVector (*constraints)(double,const dVector)) const;
+
+  // Evaluates a function double function on the y vector and on the
+  // time and returns the output of the function. Useful for energy
+  // methods. Uses the most recent time by default. But any time is
+  // possible. Feed the time in second.
+  double eval_function(double (*to_eval)(double,const dVector)) const;
+  double eval_function(double (*to_eval)(double,const dVector),int n) const;
 
   // Tests by how much the y vector at time t fails to satisfy the
   // constraint function passed in. The constraint function should

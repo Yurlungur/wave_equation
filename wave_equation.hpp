@@ -1,7 +1,7 @@
 // wave_equation.hpp
 
 // Author: Jonah Miller (jonah.maxwell.miller@gmail.com)
-// Time-stamp: <2013-11-21 11:18:43 (jonah)>
+// Time-stamp: <2013-11-24 00:47:31 (jonah)>
 
 // This is the prototype for the wave equation program that uses the
 // method of lines and finite differences to solve the wave equation.
@@ -31,8 +31,11 @@
 // Include guard
 #pragma once
 // Includes
+#include "rkf45.hpp" // The Runge-Kutta integrator
 #include <vector> // for output and internal variables
 #include <cmath> // for math
+#include <iostream> // For input and output
+#include <iomanip> // For input and output
 
 // We use the dVector type a lot, so let's define a type for it
 // to make things more readable.
@@ -45,6 +48,8 @@ typedef std::vector<double> dVector;
 
 // Number of variable types. (i.e., s,r, and u. The integration variables.)
 const int NUM_VAR_TYPES = 3;
+// Debugging? 
+const bool DEBUGGING = false;
 
 // For now we will define the number of grid points and the interval
 // length here. However, in a future modification, these will be moved
@@ -53,11 +58,19 @@ const int NUM_VAR_TYPES = 3;
 // The spatial interval is [0,INTERVAL_LENGTH]
 const double INTERVAL_LENGTH = 2*M_PI;
 // The number of discrete grid points on the lattice
-const int NUM_POINTS = 100;
+const int NUM_POINTS = 500;
 // The Speed of the Wave
 const double C2 = 1; // c^2
-// Debugging? 
-const bool DEBUGGING = false;
+
+// Boundary data
+const double LEFT_BOUNDARY_U = 0;  // left-hand boundary
+const double RIGHT_BOUNDARY_U = 0; // right-hand boundary
+
+// Some convenient names
+const int STANDING_WAVE = 0; // for standing wave boundary conditions
+const int S = 0; // For type s fields
+const int R = 1; // For type r fields
+const int U = 2; // for type u fields
 
 // ----------------------------------------------------------------------
 
@@ -97,16 +110,16 @@ double get_lattice_spacing(double interval_length, int num_points);
 int get_num_points(const dVector& v);
 
 // Access the real index of an element of type at lattice point i.
-int get_real_index_of_type(int type, int i, const dVector& v);
+int get_linear_index_of_type(int type, int i, const dVector& v);
 
 // Gets the real index of an element of s at lattice point i. 
-int get_real_index_s(int i, const dVector& v);
+int get_linear_index_s(int i, const dVector& v);
 
 // Gets the real index of an element of r at lattice point i.
-int get_real_index_r(int i, const dVector& v);
+int get_linear_index_r(int i, const dVector& v);
 
 // Gets the real index of an element of u at lattice point i.
-int get_real_index_u(int i, const dVector& v);
+int get_linear_index_u(int i, const dVector& v);
 
 // Access a variable at lattice point i of one type in the input
 // dVector. 0 for s, 1 for r, and 2 for u.
@@ -186,6 +199,122 @@ dVector f(double t, const dVector& y, const dVector& optional_args);
 // ----------------------------------------------------------------------
 
 
+
 // ----------------------------------------------------------------------
 // Initial and boundary data
+// ----------------------------------------------------------------------
+
+// We need to define the initial conditions and the boundary
+// conditions.  Since u(t,0) = alpha and u(t,L) = beta for all time, 
+// s = (du/dt) is identically zero on the boundary.
+
+// This in turn implies that (ds/dt) = 0 at the boundary for all
+// time. We need to make sure that the initial data is consistent with
+// this. So we must choose initial data such that
+// (dr/dx) = 1/c^2 (ds/dt) is zero on the boundary.
+
+// Makes initial data for a standing wave. Takes as input the
+// amplitude of thew wave u0, the wave number k, the square speed of
+// the wave c^2, the length of the interval L, and the number of
+// points in the discretized grid, num_points.
+// In the future we have many methods that generate initial data on
+// the boundary. For now, we choose to make a standing wave with
+// frequency and wave numbers of 1 and amplitude of 1/2.
+// Function we want: u(x,t) = 2 u0 * cos(omega*t) * sin(k*x),
+// where omega = k*c.
+// Thus we want:
+// u(0,x) = 2 * u_0 * sin(k * x)
+// r(0,x) = 2 * u_0 cos(k * x)
+// s(0,x) = 0 everywhere.
+// amplitude = 2*u_0
+dVector initial_standing_wave(double amplitude, double wave_number,
+			      double c2, double interval_length,
+			      int num_points);
+
+// ----------------------------------------------------------------------
+
+
+
+// ----------------------------------------------------------------------
+// Energy
+// ----------------------------------------------------------------------
+
+// We need a way to measure the energy of the system. Ideally, this
+// does not grow. The energy is
+// E = integral(r^2 + s^2) over the grid.
+// To make this work, we need a notion of inner product. See the
+// background for more information.
+
+// Inner product between two vector types on the grid, type_1 and
+// type_2. These are types of vector field as defined above. Requires
+// the lattice spacing of the grid.
+double inner_product(int type_1, int type_2, const dVector& grid,
+		     double lattice_spacing);
+
+// Calculates the energy of the grid. Requires the lattice spacing.
+double energy(const dVector& grid, double lattice_spacing);
+
+// ----------------------------------------------------------------------
+
+
+
+// ----------------------------------------------------------------------
+// Input and output
+// ----------------------------------------------------------------------
+
+// Methods for generating data.
+
+// Prints a snapshot of the fields on the input grid.
+void print_fields(const dVector& grid, double lattice_spacing,
+		  std::ostream& out = std::cout);
+
+// Overload the stream input operator to print an input dVector. If
+// you print the fields on a grid, this will look pretty bad.
+std::ostream& operator<< (std::ostream& out, const dVector& in);
+
+// Prints the data data for an integrated animation. The format is one
+// line per frame, with each line containing:
+// time s_field r_field u_field energy
+// where the fields are all space-separated lists. Energy and time are
+// the energy of the system and time of the frame
+// respectively. lattice_spacing is the distance between points on the
+// grid. The first line contains the lattice spacing.
+void print_animation_data(const RKF45& system, std::ostream& out,
+			  double lattice_spacing);
+
+// Prints the animation file. Defined as above.
+void print_animation_file(const RKF45& system, const std::string& filename,
+			  double lattice_spacing);
+
+// ----------------------------------------------------------------------
+
+
+// ----------------------------------------------------------------------
+// Simulation
+// ----------------------------------------------------------------------
+
+// We generate initial data and feed it into the Runge-Kutta
+// algorithm. Input the type of initiald data you want (currently the
+// only option is standing wave, which is type 0.
+
+// Interval length is the length of the interval. num_points is the
+// number of grid points. c2 is the square speed of the
+// wave. initial_data_algorithm is the algorithm used to generate the
+// initial data. max_dt is the time step size. Should not be chosen
+// dynamically if you wish to make a movie. dt0 is the initial step
+// size. Play with it to get a good value. integrator is the
+// Runge-Kutta integrator used. It is assumed to be fresh with nothing
+// set and no time steps made. After the algorithm is done, the
+// integrator will be returned.
+void initialize_simulation(double interval_length, int num_points,
+			   double c2,
+			   int initial_data_algorithm,
+			   double max_dt, double dt0,
+			   RKF45& integrator);
+// Default initial data algorithm is STANDING_WAVE
+void initialize_simulation(double interval_length, int num_points,
+			   double c2,
+			   double max_dt, double dt0,
+			   RKF45& integrator);
+
 // ----------------------------------------------------------------------
