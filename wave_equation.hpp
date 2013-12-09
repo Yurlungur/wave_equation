@@ -1,7 +1,7 @@
 // wave_equation.hpp
 
 // Author: Jonah Miller (jonah.maxwell.miller@gmail.com)
-// Time-stamp: <2013-11-24 00:47:31 (jonah)>
+// Time-stamp: <2013-12-09 03:57:00 (jonah)>
 
 // This is the prototype for the wave equation program that uses the
 // method of lines and finite differences to solve the wave equation.
@@ -36,11 +36,11 @@
 #include <cmath> // for math
 #include <iostream> // For input and output
 #include <iomanip> // For input and output
+#include <cstdlib>  // For random integers
 
 // We use the dVector type a lot, so let's define a type for it
 // to make things more readable.
 typedef std::vector<double> dVector;
-
 
 // ----------------------------------------------------------------------
 // Global constants
@@ -58,7 +58,7 @@ const bool DEBUGGING = false;
 // The spatial interval is [0,INTERVAL_LENGTH]
 const double INTERVAL_LENGTH = 2*M_PI;
 // The number of discrete grid points on the lattice
-const int NUM_POINTS = 500;
+const int NUM_POINTS = 50;
 // The Speed of the Wave
 const double C2 = 1; // c^2
 
@@ -67,10 +67,14 @@ const double LEFT_BOUNDARY_U = 0;  // left-hand boundary
 const double RIGHT_BOUNDARY_U = 0; // right-hand boundary
 
 // Some convenient names
-const int STANDING_WAVE = 0; // for standing wave boundary conditions
+const int STANDING_WAVE = 0; // for standing wave initial data
+const int TRAVELLING_WAVE = 1; // For travelling wave initial data
 const int S = 0; // For type s fields
 const int R = 1; // For type r fields
 const int U = 2; // for type u fields
+// Is the boundary periodic?
+const double PERIODIC = -1;
+const double OPEN = 1;
 
 // ----------------------------------------------------------------------
 
@@ -82,6 +86,26 @@ const int U = 2; // for type u fields
 
 // Calculates the distance between points on the spatial grid.
 double get_lattice_spacing(double interval_length, int num_points);
+
+// Finds the difference between the largest element and the smallest
+// element of a dVector. Useful for calculating energy differences.
+double get_max_difference(const dVector& v);
+
+// Find the max value of a dVector
+double get_max(const dVector& v);
+
+// Find hte minimum value of a dVector
+double get_min(const dVector& v);
+
+// Find the average value of a dVector
+double get_average(const dVector& v);
+
+// Find the variance of a dVector
+double get_variance(const dVector& v);
+
+// Get a random double between dmin and dmax. The distribution is
+// uniform.
+double uniform_distribution(double dmin,double dmax);
 
 // ----------------------------------------------------------------------
 
@@ -150,6 +174,13 @@ double get_ith_u(int i, const dVector& v);
 // spacing. This method has no error checking. Use at your own risk.
 double centered_difference(int i, const dVector& v, double lattice_spacing);
 
+// Centered difference derivative. Takes the index i of the element
+// and the dvector the element is in. Also needs the lattice
+// spacing. Is clever and uses modulo arithmetic to find the
+// appropriate points for a periodic boundary.
+double modular_centered_difference(int i, const dVector& v,
+				   double lattice_spacing);
+
 // Forward difference derivative. Takes the index i of the element and
 // the dVector the element is in. Also needs the lattice spacing. This
 // method has no error checking. Use at your own risk.
@@ -165,21 +196,26 @@ double backward_difference(int i, const dVector& v, double lattice_spacing);
 // is on the boundary and how to handle forward, centered, and
 // backward differences. Takes the index i of the element, the vector
 // the element is in, and the lattice spacing.
-double derivative(int i, const dVector& v, double lattice_spacing);
+double derivative(int i, const dVector& v, double lattice_spacing,
+		  double boundary_conditions);
 
 // Derivative operator that acts on an element of r, s, or u. Otherwise
 // like derivative. type 0 = s, type 1 = r, type 2 = u.
 double derivative_for_type(int type, int i, const dVector& v,
-			   double lattice_spacing);
+			   double lattice_spacing,
+			   double boundary_conditions);
 
 // Derivative operator that acts on an element of s.
-double derivative_for_s(int i, const dVector& v, double lattice_spacing);
+double derivative_for_s(int i, const dVector& v, double lattice_spacing,
+			double boundary_conditions);
 
 // Derivative operator that acts on an element of r.
-double derivative_for_r(int i, const dVector& v, double lattice_spacing);
+double derivative_for_r(int i, const dVector& v, double lattice_spacing,
+			double boundary_conditions);
 
 // Derivative operator that acts on an element of u.
-double derivative_for_u(int i, const dVector& v, double lattice_spacing);
+double derivative_for_u(int i, const dVector& v, double lattice_spacing,
+			double boundary_conditions);
 
 // ----------------------------------------------------------------------
 
@@ -231,6 +267,27 @@ dVector initial_standing_wave(double amplitude, double wave_number,
 			      double c2, double interval_length,
 			      int num_points);
 
+// Makes initial data for a travelling wave. Takes as input the
+// amplitude of the wave, the wave number k, the square speed of the
+// wave c^2, the length of the interval L, and the number of points in
+// the discretized grid, num_points.
+// Function we want: u(x,t) = u0 * sin(kx - omega*t),
+// where omega = k*c.
+// Thus we want:
+// u(0,x) = u0*sin(kx)
+// r(0,x) = k*u0*cos(kx)
+// s(0,x) = -omega*u0*cos(kx)
+dVector initial_travellng_wave(double amplitude, double wave_number,
+			       double c2, double interval_length,
+			       int num_points);
+
+// Makes initial data for the system. A helper
+// method. initial_data_type determines the initial data function to
+// call.
+dVector get_initial_data(double amplitude, double wave_number,
+			 double c2, double interval_length,
+			 int num_points,
+			 int initial_data_type);
 // ----------------------------------------------------------------------
 
 
@@ -249,10 +306,22 @@ dVector initial_standing_wave(double amplitude, double wave_number,
 // type_2. These are types of vector field as defined above. Requires
 // the lattice spacing of the grid.
 double inner_product(int type_1, int type_2, const dVector& grid,
-		     double lattice_spacing);
+		     double lattice_spacing,double boundary_conditions);
 
 // Calculates the energy of the grid. Requires the lattice spacing.
-double energy(const dVector& grid, double lattice_spacing);
+double energy(const dVector& grid, double lattice_spacing,
+	      double boundary_conditions);
+
+// Get the energy at each time step of a finished integrator
+// object. Useful for bug checking.
+dVector get_all_energies(const RKF45& integrator, double lattice_spacing,
+			 double boundary_conditions);
+
+// Get the the total change in energy over the course of a simulation
+// from the integrator
+double get_energy_difference(const RKF45& integrator,
+			     double lattice_spacing,
+			     double boundary_conditions);
 
 // ----------------------------------------------------------------------
 
@@ -280,12 +349,25 @@ std::ostream& operator<< (std::ostream& out, const dVector& in);
 // respectively. lattice_spacing is the distance between points on the
 // grid. The first line contains the lattice spacing.
 void print_animation_data(const RKF45& system, std::ostream& out,
-			  double lattice_spacing);
+			  double lattice_spacing,
+			  double boundary_conditions);
 
 // Prints the animation file. Defined as above.
 void print_animation_file(const RKF45& system, const std::string& filename,
-			  double lattice_spacing);
+			  double lattice_spacing,
+			  double boundary_conditions);
 
+// Prints some statistics about the energy of a finished system as a
+// function of time.
+void print_energy_statistics(const RKF45& system,
+			     std::ostream& out,
+			     double lattice_spacing,
+			     double boundary_conditions);
+
+// Prints some statistics about the energy of a finished system as a
+// function of time.
+void print_energy_statistics(const RKF45& system, double lattice_spacing,
+			     double boundary_conditions);
 // ----------------------------------------------------------------------
 
 
@@ -310,11 +392,14 @@ void initialize_simulation(double interval_length, int num_points,
 			   double c2,
 			   int initial_data_algorithm,
 			   double max_dt, double dt0,
+			   double boundary_conditions,
 			   RKF45& integrator);
 // Default initial data algorithm is STANDING_WAVE
 void initialize_simulation(double interval_length, int num_points,
 			   double c2,
 			   double max_dt, double dt0,
 			   RKF45& integrator);
+
+// After all is said and do
 
 // ----------------------------------------------------------------------

@@ -1,31 +1,29 @@
-// standing_wave.cpp
+// travelling_wave.cpp
 
 // Author: Jonah Miller (jonah.maxwell.miller@gmail.com)
-// Time-stamp: <2013-12-09 03:40:27 (jonah)>
+// Time-stamp: <2013-12-09 03:56:27 (jonah)>
 
-// This is one piece of my wave equation numerical solver. This
-// program is the main function for the simulation that looks for a
-// standing wave solution.
+// This is one piece of my wave equation numerical solver. This is the
+// main function for the simulation that looks like a travelling wave
+// with periodic boundary conditions.
 // ----------------------------------------------------------------------
-
 
 // Includes
 #include "wave_equation.hpp"
-#include <cassert> // for obvious reasons.
-#include <cmath> // for math
-#include <fstream> // For file input and output
+#include <cassert>
+#include <cmath>
+#include <fstream>
 using std::cout;
 using std::endl;
 using std::ostream;
 using std::ofstream;
 using std::setw;
 
-
 int main() {
-  cout << "Let's simulate a standing wave!" << endl;
-  
+  cout << "Let's make a travelling wave!" << endl;
+
   // Values and objects we'll need
-  std::string outfile_name = "standing_wave.dat"; // file name for data
+  char outfile_name[] = "travelling_wave.dat";
   double interval_length = INTERVAL_LENGTH; // The length of the box
 					    // the wave is confined to
   int num_points = NUM_POINTS; // The size of the grid
@@ -34,8 +32,8 @@ int main() {
   double max_t = 100*(2*M_PI); // The time we integrate to.
   double max_dt = 0.1*lattice_spacing/c2; // The max time step allowed
   double dt0 = max_dt/2.0; // The initial time step
-  int initial_data_algorithm = STANDING_WAVE; // initial data
-  double boundary_conditions = OPEN; // Boundary conditions
+  int initial_data_algorithm = TRAVELLING_WAVE; // initial data
+  double boundary_conditions = PERIODIC; // Boundary conditions
   RKF45 integrator; // The runge kutta integrator object 
 
   // Let's do this!

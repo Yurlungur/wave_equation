@@ -1,7 +1,7 @@
 // rkf45.hpp
 
 // Author: Jonah Miller (jonah.maxwell.miller@gmail.com)
-// Time-stamp: <2013-11-23 22:23:24 (jonah)>
+// Time-stamp: <2013-11-27 12:25:32 (jonah)>
 
 // This is the prototype for my implementation of the 4-5
 // Runge-Kutta-Feldberg adaptive step size integrator. For simplicity,
@@ -501,7 +501,7 @@ public: // Public interface
   // whether y(t) satisfies the constraint function. This is the fast,
   // safe solution to the problem of monitoring constriants. t is
   // chosen as t after n time steps.
-  bool test_constraints(bool (*constraints)(double,const dVector),
+  bool test_constraints(bool (*constraints)(double,const dVector&),
 			int n) const;
 
   // Tests whether or not a given set of constraints is
@@ -509,28 +509,29 @@ public: // Public interface
   // whether y(t) satisfies the constraint function. t is set to the
   // current time. This is the fast, safe solution to the problem of
   // monitoring constriants.
-  bool test_constraints(bool (*constraints)(double,const dVector)) const;
+  bool test_constraints(bool (*constraints)(double,const dVector&)) const;
 
   // Tests by how much the y vector at time t fails to satisfy the
   // constraint function passed in. The constraint function should
   // return a vector<double> where each element shows how much the y
   // vector failed to satisfy the appropriate constraint
   // equation. Passed by reference. Uses the most recent time.
-  dVector test_constraint_degree(dVector (*constraints)(double,const dVector)) const;
+  dVector test_constraint_degree(dVector (*constraints)(double,const dVector&)) const;
 
   // Evaluates a function double function on the y vector and on the
   // time and returns the output of the function. Useful for energy
   // methods. Uses the most recent time by default. But any time is
   // possible. Feed the time in second.
-  double eval_function(double (*to_eval)(double,const dVector)) const;
-  double eval_function(double (*to_eval)(double,const dVector),int n) const;
+  double eval_function(double (*to_eval)(double,const dVector&)) const;
+  double eval_function(double (*to_eval)(double,const dVector&),int n) const;
 
   // Tests by how much the y vector at time t fails to satisfy the
   // constraint function passed in. The constraint function should
   // return a vector<double> where each element shows how much the y
   // vector failed to satisfy the appropriate constraint
   // equation. Passed by reference.
-  dVector test_constraint_degree(dVector (*constraints)(double,const dVector),
+  dVector test_constraint_degree(dVector (*constraints)(double,
+							const dVector&),
 				 int n) const;
 
   // Prints the integration history to an output stream. No stream

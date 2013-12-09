@@ -1,7 +1,7 @@
 // wave_equation.hpp
 
 // Author: Jonah Miller (jonah.maxwell.miller@gmail.com)
-// Time-stamp: <2013-11-24 00:45:18 (jonah)>
+// Time-stamp: <2013-12-09 03:43:03 (jonah)>
 
 // This is the implementation of the wave equation program that uses
 // the method of lines and finite differences to solve the wave
@@ -31,11 +31,91 @@ using std::endl;
 using std::ostream;
 using std::ofstream;
 using std::setw;
+using std::rand;
 
 
 // ----------------------------------------------------------------------
 double get_lattice_spacing(double interval_length, int num_points) {
   return double(interval_length)/(num_points - 1);
+}
+// ----------------------------------------------------------------------
+
+
+// ----------------------------------------------------------------------
+double get_max_difference(const dVector& v) {
+  double max = v[0];
+  double min = v[0];
+  for (dVector::const_iterator it = v.begin(); it != v.end(); ++it) {
+    if ( (*it) > max ) {
+      max = (*it);
+    }
+    if ( (*it) < min ) {
+      min = (*it);
+    }
+  }
+  return max - min;
+}
+// ----------------------------------------------------------------------
+
+
+// ----------------------------------------------------------------------
+double get_max(const dVector& v) {
+  double max_value = v[0];
+  for (dVector::const_iterator it = v.begin(); it != v.end(); ++it) {
+    if ( (*it) > max_value ) {
+      max_value = (*it);
+    }
+  }
+  return max_value;
+}
+// ----------------------------------------------------------------------
+
+
+// ----------------------------------------------------------------------
+double get_min(const dVector& v) {
+ double min_value = v[0];
+  for (dVector::const_iterator it = v.begin(); it != v.end(); ++it) {
+    if ( (*it) < min_value ) {
+      min_value = (*it);
+    }
+  }
+  return min_value;
+}
+// ----------------------------------------------------------------------
+
+
+// ----------------------------------------------------------------------
+double get_average(const dVector& v) {
+  double average_val = 0;
+  for (dVector::const_iterator it = v.begin(); it != v.end(); ++it) {
+    average_val += (*it);
+  }
+  average_val /= v.size();
+  return average_val;
+}
+// ----------------------------------------------------------------------
+
+
+// ----------------------------------------------------------------------
+double get_variance(const dVector& v) {
+  double average_val = get_average(v);
+  double variance = 0;
+  for (dVector::const_iterator it = v.begin(); it != v.end(); ++it) {
+    variance += ((*it) - average_val) * ((*it) - average_val);
+  }
+  variance = sqrt(variance);
+  return variance;
+}
+// ----------------------------------------------------------------------
+
+
+// ----------------------------------------------------------------------
+double uniform_distribution(double dmin,double dmax) {
+  assert ( dmax > dmin && "Max value must be greater than minimum value." );
+  double width = dmax - dmin;
+  int rand_int = rand();
+  double uniform_double = fmod(double(rand_int), width) - dmin;
+  return uniform_double;
 }
 // ----------------------------------------------------------------------
 
@@ -105,6 +185,24 @@ double centered_difference(int i, const dVector& v, double lattice_spacing) {
   return (v[i+1] - v[i-1])/(2*lattice_spacing);
 }
 
+double modular_centered_difference(int i, const dVector& v,
+				   double lattice_spacing) {
+  // A local "num points" variable. Used for simplicity.
+  int num_points = get_num_points(v);
+  assert (0 <= i && i < (int)v.size()
+	  && "The ith elemennt must be in the vector");
+  if (i % num_points == 0 ) { // We're at the lower boundary of the grid.
+    return (v[i+1] - v[i + num_points - 1])/(2*lattice_spacing);
+  }
+  else if (i % num_points == num_points - 1) {
+    // We're at the the upper boundary of the grid.
+    return (v[i - num_points + 1] - v[i-1])/(2*lattice_spacing);
+  }
+  else { // We're in the middle of the grid.
+    return centered_difference(i,v,lattice_spacing);
+  }
+}
+
 double forward_difference(int i, const dVector& v, double lattice_spacing) {
   return (v[i+1] - v[i])/lattice_spacing;
 }
@@ -116,7 +214,18 @@ double backward_difference(int i, const dVector& v, double lattice_spacing) {
 
 
 // ----------------------------------------------------------------------
-double derivative(int i, const dVector& v, double lattice_spacing) {
+double derivative(int i, const dVector& v, double lattice_spacing,
+		  double boundary_conditions) {
+  // First, if the boundary conditions are periodic, we use the
+  // modular centered difference. Otherwise, we do the standard
+  // procedure.
+  if ( boundary_conditions == PERIODIC ) {
+    if (DEBUGGING) {
+      cout << "\tUsing modular finite difference." << endl;
+    }
+    return modular_centered_difference(i,v,lattice_spacing);
+  }
+
   // A local "num points" variable. Used for simplicity.
   int num_points = get_num_points(v);
   assert (0 <= i && i < (int)v.size()
@@ -148,20 +257,29 @@ double derivative(int i, const dVector& v, double lattice_spacing) {
 
 // ----------------------------------------------------------------------
 double derivative_for_type(int type, int i, const dVector& v,
-			   double lattice_spacing) {
-  return derivative(get_linear_index_of_type(type,i,v),v,lattice_spacing);
+			   double lattice_spacing,
+			   double boundary_conditions) {
+  return derivative(get_linear_index_of_type(type,i,v),
+		    v,lattice_spacing,
+		    boundary_conditions);
 }
 
-double derivative_for_s(int i, const dVector& v, double lattice_spacing) {
-  return derivative_for_type(S,i,v,lattice_spacing);
+double derivative_for_s(int i, const dVector& v, double lattice_spacing,
+			double boundary_conditions) {
+  return derivative_for_type(S,i,v,lattice_spacing,
+			     boundary_conditions);
 }
 
-double derivative_for_r(int i, const dVector& v, double lattice_spacing) {
-  return derivative_for_type(R,i,v,lattice_spacing);
+double derivative_for_r(int i, const dVector& v, double lattice_spacing,
+			double boundary_conditions) {
+  return derivative_for_type(R,i,v,lattice_spacing,
+			     boundary_conditions);
 }
 
-double derivative_for_u(int i, const dVector& v, double lattice_spacing) {
-  return derivative_for_type(U,i,v,lattice_spacing);
+double derivative_for_u(int i, const dVector& v, double lattice_spacing,
+			double boundary_conditions) {
+  return derivative_for_type(U,i,v,lattice_spacing,
+			     boundary_conditions);
 }
 // ----------------------------------------------------------------------
 
@@ -176,6 +294,7 @@ dVector f(double t, const dVector& y, const dVector& optional_args) {
   // The optional arguments vector contains the lattice spacing and c^2.
   double h = optional_args[0];  // h = lattice spacing
   double c2 = optional_args[1]; // c2 = c^2.
+  double boundary_conditions = optional_args[2];
 
   // For convenience, get the number of points in the lattice
   int num_points = get_num_points(y);
@@ -191,13 +310,26 @@ dVector f(double t, const dVector& y, const dVector& optional_args) {
     // Fill the (du/dt) terms with s.
     output[get_linear_index_u(i,output)] = get_ith_s(i,y);
     // Fill the (dr/dt) vectors with (ds/dx).
-    output[get_linear_index_r(i,output)] = derivative_for_s(i,y,h);
+    output[get_linear_index_r(i,output)] = derivative_for_s(i,y,h,
+							    boundary_conditions);
     // Fill the (ds/dt) vectors with c^2(dr/dx).
-    output[get_linear_index_s(i,output)] = c2 * derivative_for_r(i,y,h);
+    output[get_linear_index_s(i,output)] = c2 * derivative_for_r(i,y,h,
+								 boundary_conditions);
   }
-  // (du/dt) at the boundary is forced to be zero. Impose this.
-  output[get_linear_index_s(0,output)] = 0;
-  output[get_linear_index_s(num_points-1,output)] = 0;
+  // If boundary is open, (du/dt) at the boundary is forced to be
+  // zero. Impose this.
+  if (boundary_conditions == OPEN) {
+    output[get_linear_index_s(0,output)] = 0;
+    output[get_linear_index_s(num_points-1,output)] = 0;
+    // This means that ds/dt = dr/dx = 0 at the boundary.
+    // So we must impose that dr/dx =0 at the boundary too.
+    /*
+      output[get_linear_index_r(1,output)]
+      = output[get_linear_index_r(0,output)];
+      output[get_linear_index_r(num_points-1-1,output)]
+      = output[get_linear_index_r(num_points-1,output)];
+    */
+  } 
 
   // That's it. Return the array!
   return output;
@@ -206,7 +338,7 @@ dVector f(double t, const dVector& y, const dVector& optional_args) {
 
 
 // ----------------------------------------------------------------------
-// Boundary data
+// Initial data
 // ----------------------------------------------------------------------
 dVector initial_standing_wave(double amplitude, double wave_number,
 			      double c2, double interval_length,
@@ -221,7 +353,7 @@ dVector initial_standing_wave(double amplitude, double wave_number,
   // fields on the lattice.
   dVector initial_data(NUM_VAR_TYPES * num_points,0);
 
-  // A temporary variables for storing u, r, and s at a given lattice
+  // Temporary variables for storing u, r, and s at a given lattice
   // point.
   double u,r,s;
 
@@ -236,9 +368,73 @@ dVector initial_standing_wave(double amplitude, double wave_number,
     initial_data[get_linear_index_r(i,initial_data)] = r;
     initial_data[get_linear_index_s(i,initial_data)] = s;
   }
+  // There is a compatibility condition at the boundary. dr/dx=ds/dt=0
+  /*
+  initial_data[get_linear_index_r(1,initial_data)]
+    = initial_data[get_linear_index_r(0,initial_data)];
+  initial_data[get_linear_index_r(num_points-1-1,initial_data)]
+    = initial_data[get_linear_index_r(num_points-1,initial_data)];
+  */
  
   // Return the generated standing wave.
   return initial_data;  
+}
+
+dVector initial_travelling_wave(double amplitude, double wave_number,
+				double c2, double interval_length,
+				int num_points) {
+  assert ( c2 > 0 && "The square speed of the wave must be positive." );
+
+  // The first thing we need to do is calculate the lattice spacing
+  double lattice_spacing = get_lattice_spacing(interval_length,num_points);
+
+  // We also need the output:
+  // A vector with the appropriate number of elements for the three
+  // fields on the lattice.
+  dVector initial_data(NUM_VAR_TYPES * num_points,0);
+
+  // Some convenience names
+  double k = wave_number;
+  double omega = k*sqrt(c2);
+  double u0 = amplitude;
+
+  // Temporary variables for storing u, r, and s at a given lattice
+  // point. x is the position.
+  double u,r,s,x;
+
+  // Now we need to fill the array with the initial data we care about
+  for (int i = 0; i < num_points; i++) {
+    x = lattice_spacing*i;
+    u = u0*sin(k*x);
+    r = k*u0*cos(k*x);
+    s = -omega*u0*cos(k*x);
+    initial_data[get_linear_index_u(i,initial_data)] = u;
+    initial_data[get_linear_index_r(i,initial_data)] = r;
+    initial_data[get_linear_index_s(i,initial_data)] = s;
+  }
+  return initial_data;
+}
+
+dVector get_initial_data(double amplitude, double wave_number,
+			 double c2, double interval_length,
+			 int num_points,
+			 int initial_data_type) {
+  dVector output;
+  switch (initial_data_type) {
+  case STANDING_WAVE:
+    output = initial_standing_wave(amplitude,wave_number,
+				   c2,interval_length,num_points);
+    break;
+  case TRAVELLING_WAVE:
+    output = initial_travelling_wave(amplitude,wave_number,
+				     c2,interval_length,num_points);
+    break;
+  default:
+    cout << "Initial data type chosen: " << initial_data_type << endl;
+    assert ( false && "Warning invalid initial data." );
+    break;
+  }
+  return output;
 }
 // ----------------------------------------------------------------------
 
@@ -278,7 +474,8 @@ void print_fields(const dVector& grid, double lattice_spacing,
 
 // ----------------------------------------------------------------------
 void print_animation_data(const RKF45& system, std::ostream& out,
-			  double lattice_spacing) {
+			  double lattice_spacing,
+			  double boundary_conditions) {
   // Print header line
   out << lattice_spacing << endl;
   out << "# s_field r_field u_field energy time" << endl;
@@ -295,7 +492,7 @@ void print_animation_data(const RKF45& system, std::ostream& out,
   for (int n = 0; n < system.steps(); n++) {
     t = system.get_t(n);
     y = system.get_y(n);
-    e = energy(y,lattice_spacing);
+    e = energy(y,lattice_spacing,boundary_conditions);
     out << t << " ";
     for (dVector::const_iterator it = y.begin(); it != y.end(); ++it) {
       out << (*it) << " ";
@@ -308,10 +505,11 @@ void print_animation_data(const RKF45& system, std::ostream& out,
 
 // ----------------------------------------------------------------------
 void print_animation_file(const RKF45& system, const std::string& filename,
-			  double lattice_spacing) {
+			  double lattice_spacing,
+			  double boundary_conditions) {
   ofstream outfile;
   outfile.open(&filename[0]);
-  print_animation_data(system,outfile,lattice_spacing);
+  print_animation_data(system,outfile,lattice_spacing,boundary_conditions);
   outfile.close();
 }
 // ----------------------------------------------------------------------
@@ -330,22 +528,53 @@ std::ostream& operator <<(std::ostream& out, const dVector& in) {
 
 
 // ----------------------------------------------------------------------
+void print_energy_statistics(const RKF45& system,
+			     std::ostream& out,
+			     double lattice_spacing,
+			     double boundary_conditions) {
+  // Calculate statistics
+  dVector energies = get_all_energies(system, lattice_spacing,
+				      boundary_conditions);
+  double mean_energy = get_average(energies);
+  double energy_variance = get_variance(energies);
+  double max_difference = get_max_difference(energies);
+  double net_change = energies[energies.size()-1] - energies[0];
+  // Output
+  out << "The average energy is: " << mean_energy << "." << endl;
+  out << "The variance in the energy is: " << energy_variance
+      << "." << endl;
+  out << "The maximum difference in energies is: "
+      << max_difference << "." << endl;
+  out << "The net change in energies is: " << net_change << "." << endl;
+}
+
+void print_energy_statistics(const RKF45& system, double lattice_spacing,
+			     double boundary_conditions) {
+  print_energy_statistics(system,cout,lattice_spacing,boundary_conditions);
+}
+// ----------------------------------------------------------------------
+
+
+// ----------------------------------------------------------------------
 // Energy
 // ----------------------------------------------------------------------
 double inner_product(int type_1, int type_2, const dVector& grid,
-		     double lattice_spacing) {
+		     double lattice_spacing,double boundary_conditions) {
   // For convenience, the number of points on the grid
   int num_points = get_num_points(grid);
   // The output number
   double output = 0;
+  // The factor at the edge of the metric
+  double edge_factor = boundary_conditions == OPEN ? 0.5 : 1;
   // For convenience, the product of just two elements
   double product;
 
   for (int i = 0; i < num_points; i++) {
     product = get_ith_element_of_type(type_1,i,grid)
       * get_ith_element_of_type(type_2,i,grid);
-    if ( i == 0 || i == num_points - 1 ) { // metric has 1/2s here
-      output += 0.5 * lattice_spacing * product;
+    if ( i == 0 || i == num_points - 1 ) {
+      // metric may not be identity here
+      output += edge_factor * lattice_spacing * product;
   }
     else { // metric is the identity here.
       output += lattice_spacing * product;
@@ -354,9 +583,34 @@ double inner_product(int type_1, int type_2, const dVector& grid,
   return output;
 }
 
-double energy(const dVector& grid, double lattice_spacing) {
-  return inner_product(0,0,grid,lattice_spacing)
-    + inner_product(1,1,grid,lattice_spacing);
+double energy(const dVector& grid, double lattice_spacing,
+	      double boundary_conditions) {
+  return inner_product(0,0,grid,lattice_spacing,boundary_conditions)
+    + inner_product(1,1,grid,lattice_spacing,boundary_conditions);
+}
+// ----------------------------------------------------------------------
+
+
+// ----------------------------------------------------------------------
+dVector get_all_energies(const RKF45& integrator, double lattice_spacing,
+			 double boundary_conditions) {
+  dVector energies(integrator.steps(),0); // the output
+  dVector grid; // The grid. We'll be reusing this a lot.
+  for (int i = 0; i < integrator.steps(); i++) {
+    grid = integrator.get_y(i);
+    energies[i] = energy(grid,lattice_spacing,boundary_conditions);
+  }
+  return energies;
+}
+// ----------------------------------------------------------------------
+
+
+// ----------------------------------------------------------------------
+double get_energy_difference(const RKF45& integrator,
+			     double lattice_spacing,
+			     double boundary_conditions) {
+  return get_max_difference(get_all_energies(integrator,lattice_spacing,
+					     boundary_conditions));
 }
 // ----------------------------------------------------------------------
 
@@ -368,24 +622,25 @@ void initialize_simulation(double interval_length, int num_points,
 			   double c2,
 			   int initial_data_algorithm,
 			   double max_dt, double dt0,
+			   double boundary_conditions,
 			   RKF45& integrator) {
 
   // First generate initial data.
-  assert (initial_data_algorithm == STANDING_WAVE
-	  && "There are no other algorithms available at this time.");
   // We assume the following values for amplitude and wave number
   double amplitude = 1;
   double wave_number = 1;
-  dVector y0 = initial_standing_wave(amplitude,wave_number,c2,
-				     interval_length,num_points);
+  dVector y0 = get_initial_data(amplitude,wave_number,c2,
+				interval_length,num_points,
+				initial_data_algorithm);
 
   // We need to calculate the lattice spacing.
   double lattice_spacing = get_lattice_spacing(interval_length,num_points);
 
   // Our iterator function takes optional arguments
-  dVector optional_args(2);
+  dVector optional_args(3);
   optional_args[0] = lattice_spacing;
   optional_args[1] = c2; // The square speed of the wave.
+  optional_args[2] = boundary_conditions;
 
   // Let's set the other important values for the integrator.
   integrator.set_f(f); // Iterator function
@@ -401,6 +656,7 @@ void initialize_simulation(double interval_length, int num_points,
 			   double max_dt, double dt0,
 			   RKF45& integrator) {
   initialize_simulation(interval_length,num_points,c2,
-			STANDING_WAVE,max_dt,dt0,integrator);
+			STANDING_WAVE,max_dt,dt0,
+			OPEN,integrator);
 }
 // ----------------------------------------------------------------------
