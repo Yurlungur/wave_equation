@@ -1,7 +1,7 @@
 // wave_equation.hpp
 
 // Author: Jonah Miller (jonah.maxwell.miller@gmail.com)
-// Time-stamp: <2013-12-09 03:57:00 (jonah)>
+// Time-stamp: <2013-12-09 18:05:09 (jonah)>
 
 // This is the prototype for the wave equation program that uses the
 // method of lines and finite differences to solve the wave equation.
@@ -85,7 +85,8 @@ const double OPEN = 1;
 // ----------------------------------------------------------------------
 
 // Calculates the distance between points on the spatial grid.
-double get_lattice_spacing(double interval_length, int num_points);
+double get_lattice_spacing(double interval_length, int num_points,
+			   double boundary_conditions);
 
 // Finds the difference between the largest element and the smallest
 // element of a dVector. Useful for calculating energy differences.

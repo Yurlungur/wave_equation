@@ -1,7 +1,7 @@
 // wave_equation.hpp
 
 // Author: Jonah Miller (jonah.maxwell.miller@gmail.com)
-// Time-stamp: <2013-12-09 03:43:03 (jonah)>
+// Time-stamp: <2013-12-09 18:06:47 (jonah)>
 
 // This is the implementation of the wave equation program that uses
 // the method of lines and finite differences to solve the wave
@@ -35,8 +35,10 @@ using std::rand;
 
 
 // ----------------------------------------------------------------------
-double get_lattice_spacing(double interval_length, int num_points) {
-  return double(interval_length)/(num_points - 1);
+double get_lattice_spacing(double interval_length, int num_points,
+			   double boundary_conditions) {
+  int boundary_correction = boundary_conditions == OPEN ? 1 : 0;
+  return double(interval_length)/(num_points - boundary_correction);
 }
 // ----------------------------------------------------------------------
 
@@ -346,7 +348,9 @@ dVector initial_standing_wave(double amplitude, double wave_number,
   assert ( c2 > 0 && "The square speed of the wave must be positive." );
 
   // The first thing we need to do is calculate the lattice spacing
-  double lattice_spacing = get_lattice_spacing(interval_length,num_points);
+  double boundary_conditions = OPEN;
+  double lattice_spacing = get_lattice_spacing(interval_length,num_points,
+					       boundary_conditions);
 
   // We also need the output:
   // A vector with the appropriate number of elements for the three
@@ -386,7 +390,9 @@ dVector initial_travelling_wave(double amplitude, double wave_number,
   assert ( c2 > 0 && "The square speed of the wave must be positive." );
 
   // The first thing we need to do is calculate the lattice spacing
-  double lattice_spacing = get_lattice_spacing(interval_length,num_points);
+  double boundary_conditions = PERIODIC;
+  double lattice_spacing = get_lattice_spacing(interval_length,num_points,
+					       boundary_conditions);
 
   // We also need the output:
   // A vector with the appropriate number of elements for the three
@@ -634,7 +640,9 @@ void initialize_simulation(double interval_length, int num_points,
 				initial_data_algorithm);
 
   // We need to calculate the lattice spacing.
-  double lattice_spacing = get_lattice_spacing(interval_length,num_points);
+  double lattice_spacing = get_lattice_spacing(interval_length,
+					       num_points,
+					       boundary_conditions);
 
   // Our iterator function takes optional arguments
   dVector optional_args(3);

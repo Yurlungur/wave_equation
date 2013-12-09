@@ -1,7 +1,7 @@
 // travelling_wave.cpp
 
 // Author: Jonah Miller (jonah.maxwell.miller@gmail.com)
-// Time-stamp: <2013-12-09 03:56:27 (jonah)>
+// Time-stamp: <2013-12-09 18:07:22 (jonah)>
 
 // This is one piece of my wave equation numerical solver. This is the
 // main function for the simulation that looks like a travelling wave
@@ -27,13 +27,14 @@ int main() {
   double interval_length = INTERVAL_LENGTH; // The length of the box
 					    // the wave is confined to
   int num_points = NUM_POINTS; // The size of the grid
-  double lattice_spacing = get_lattice_spacing(interval_length,num_points);
+  int initial_data_algorithm = TRAVELLING_WAVE; // initial data
+  double boundary_conditions = PERIODIC; // Boundary conditions
+  double lattice_spacing = get_lattice_spacing(interval_length,num_points,
+					       boundary_conditions);
   double c2 = C2; // c^2, the speed of the wave squared.
   double max_t = 100*(2*M_PI); // The time we integrate to.
   double max_dt = 0.1*lattice_spacing/c2; // The max time step allowed
   double dt0 = max_dt/2.0; // The initial time step
-  int initial_data_algorithm = TRAVELLING_WAVE; // initial data
-  double boundary_conditions = PERIODIC; // Boundary conditions
   RKF45 integrator; // The runge kutta integrator object 
 
   // Let's do this!
