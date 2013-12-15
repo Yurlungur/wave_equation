@@ -1,7 +1,7 @@
 // wave_equation.hpp
 
 // Author: Jonah Miller (jonah.maxwell.miller@gmail.com)
-// Time-stamp: <2013-12-09 18:06:47 (jonah)>
+// Time-stamp: <2013-12-14 22:02:27 (jonah)>
 
 // This is the implementation of the wave equation program that uses
 // the method of lines and finite differences to solve the wave
@@ -449,7 +449,7 @@ dVector get_initial_data(double amplitude, double wave_number,
 void print_fields(const dVector& grid, double lattice_spacing,
 		  std::ostream& out) {
   // Header line
-  int precision = 10;
+  int precision = 16;
   int width = precision+5;
   out << std::setiosflags(std::ios::left)
       << std::setfill(' ')

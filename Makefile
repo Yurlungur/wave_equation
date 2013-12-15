@@ -1,6 +1,6 @@
 # Makefile for the wave_equation package
 # Author: Jonah Miller (jonah.maxwell.miller@gmail.com)
-# Time-stamp: <2013-12-09 02:50:49 (jonah)>
+# Time-stamp: <2013-12-11 17:34:31 (jonah)>
 
 # The default compiler is g++
 CXX = g++

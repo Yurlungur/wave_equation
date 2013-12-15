@@ -1,7 +1,7 @@
 // wave_equation.hpp
 
 // Author: Jonah Miller (jonah.maxwell.miller@gmail.com)
-// Time-stamp: <2013-12-09 18:05:09 (jonah)>
+// Time-stamp: <2013-12-11 17:34:34 (jonah)>
 
 // This is the prototype for the wave equation program that uses the
 // method of lines and finite differences to solve the wave equation.
